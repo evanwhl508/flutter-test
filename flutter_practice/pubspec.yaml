@@ -21,6 +21,9 @@ environment:
   sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
+  firebase_core: 0.7.0
+#  cloud_firestore: ^2.5.1
+  rxdart:
   flutter:
     sdk: flutter
   http: ^0.13.3

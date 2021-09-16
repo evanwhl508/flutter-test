@@ -50,16 +50,17 @@ class _MyHomePageState extends BaseState<MyHomePage> {
 
   Future<List<Coin>> _fetchCoinList() async {
     final response = await http.get(Uri.parse(
-        'https://api.coinstats.app/public/v1/coins/?currency=USD&limit=5'));
+        'https://api.coinstats.app/public/v1/coins/?currency=USD&limit=20'));
 
     if (response.statusCode == 200) {
       List<Coin> res = List.empty();
-      List<dynamic> coins = jsonDecode(response.body)["coins"];
-      for (Map<String, dynamic> data in coins) {
-        res += [Coin.fromJson(data)];
-      }
-
-      return res;
+      List<Coin> coins = (jsonDecode(response.body)["coins"] as List).map((data) => Coin.fromJson(data)).toList();
+      // List<dynamic> coins = jsonDecode(response.body)["coins"];
+      // for (Map<String, dynamic> data in coins) {
+      //   res += [Coin.fromJson(data)];
+      // }
+      return coins;
+      // return res;
     } else {
       throw Exception('Failed to load album');
     }
@@ -72,7 +73,8 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           return Row(
             children: [
               SizedBox(width: 5),
-              Image.network(c.url),
+              Image.network(c.url, width: 30, height: 30,
+                errorBuilder: (ctx, error, trace) {return Container(width: 30, height: 30); },),
               SizedBox(width: 10),
               Column(
                 children: [

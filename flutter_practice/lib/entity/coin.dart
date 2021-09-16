@@ -3,8 +3,8 @@ class Coin {
   final String url;
   final String name;
   final String symbol;
-  final double price;
-  final double priceChange1d;
+  final num price;
+  final num priceChange1d;
   bool isFav;
 
   Coin(

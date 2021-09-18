@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'base/base_stateless_widget.dart';
+import 'coin_details.dart';
 import 'entity/coin.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -38,8 +39,8 @@ class _MyHomePageState extends BaseState<MyHomePage> {
       ),
       body: SafeArea(
           child: Center(
-        child: _getBody(coinList),
-      )),
+            child: _getBody(coinList),
+          )),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         tooltip: 'Increment',
@@ -54,7 +55,8 @@ class _MyHomePageState extends BaseState<MyHomePage> {
 
     if (response.statusCode == 200) {
       List<Coin> res = List.empty();
-      List<Coin> coins = (jsonDecode(response.body)["coins"] as List).map((data) => Coin.fromJson(data)).toList();
+      List<Coin> coins = (jsonDecode(response.body)["coins"] as List).map((
+          data) => Coin.fromJson(data)).toList();
       // List<dynamic> coins = jsonDecode(response.body)["coins"];
       // for (Map<String, dynamic> data in coins) {
       //   res += [Coin.fromJson(data)];
@@ -70,74 +72,88 @@ class _MyHomePageState extends BaseState<MyHomePage> {
     return ListView.separated(
         itemBuilder: (ctx, index) {
           Coin c = coinList[index];
-          return Row(
-            children: [
-              SizedBox(width: 5),
-              Image.network(c.url, width: 30, height: 30,
-                errorBuilder: (ctx, error, trace) {return Container(width: 30, height: 30); },),
-              SizedBox(width: 10),
-              Column(
-                children: [
-                  Text(
+          return ElevatedButton(
+            child: Row(
+              children: [
+                SizedBox(width: 5),
+                Image.network(c.url, width: 50, height: 50,
+                  errorBuilder: (ctx, error, trace) {
+                    return Container(width: 30, height: 30);
+                  },),
+                SizedBox(width: 10),
+                Column(
+                  children: [
+                    Text(
                       c.symbol,
                       style: new TextStyle(
                         fontSize: 35,
                       ),
-                  ),
-                  Text(
+                    ),
+                    Text(
                       c.id,
                       style: new TextStyle(
                         fontSize: 16,
                       ),
-                  )
-                ],
-                crossAxisAlignment: CrossAxisAlignment.start,
-              ),
-              Spacer(flex: 5),
-              Column(
-                children: [
-                  Text(
+                    )
+                  ],
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                Spacer(flex: 5),
+                Column(
+                  children: [
+                    Text(
                       c.price.toStringAsFixed(2),
                       style: new TextStyle(
                         fontSize: 35,
                       ),
-                  ),
-                  Text(
+                    ),
+                    Text(
                       c.priceChange1d.toStringAsFixed(2) + '%',
                       style: new TextStyle(
                         fontSize: 15,
                       ),
-                  ),
-                ],
-                crossAxisAlignment: CrossAxisAlignment.end,
-              ),
-              Spacer(flex: 1),
-              Column(
-                children: [
-                  IconButton(
-                    icon: new Icon(
-                      Icons.favorite,
-                      color: (c.isFav ? Colors.red : Colors.grey),
                     ),
-                    splashRadius: 25.0,
-                    tooltip: 'Set favourite',
-                    onPressed: () {
-                      setState(() {
-                        print("c.isFav = ${c.isFav}");
-                        c.isFav = !c.isFav;
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_alert),
-                    tooltip: 'Set alert',
-                    onPressed: () {
-                      setState(() {});
-                    },
-                  ),
-                ],
+                  ],
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                ),
+                Spacer(flex: 1),
+                Column(
+                  children: [
+                    IconButton(
+                      icon: new Icon(
+                        Icons.favorite,
+                        color: (c.isFav ? Colors.red : Colors.grey),
+                      ),
+                      splashRadius: 25.0,
+                      tooltip: 'Set favourite',
+                      onPressed: () {
+                        setState(() {
+                          print("c.isFav = ${c.isFav}");
+                          c.isFav = !c.isFav;
+                        });
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_alert),
+                      tooltip: 'Set alert',
+                      onPressed: () {
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CoinDetail(id: c.id, name: c.name, imgUrl:c.url)),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+                onPrimary: Colors.black54,
+                primary: Colors.white,
               ),
-            ],
           );
         },
         separatorBuilder: (_, __) => Divider(),

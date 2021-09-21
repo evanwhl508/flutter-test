@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:rxdart/rxdart.dart';
 
 import 'base/base_stateless_widget.dart';
 import 'coin_details.dart';
@@ -17,46 +18,73 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends BaseState<MyHomePage> {
+  List<Coin> rawCoinList = List.empty();
   List<Coin> coinList = List.empty();
+  var dropdownSubject = BehaviorSubject<String>();
+  List<String> items = ["USD", "HKD", "GBP", "JPY"];
+  String dropdownValue = "USD";
 
   @override
   void initState() {
     super.initState();
-    _fetchCoinList().then((result) {
-      print(result);
-      setState(() {
-        coinList = result;
+    var timer = Stream.periodic(Duration(seconds: 10), (x) => x);
+    dropdownSubject.add("USD");
+    CombineLatestStream.combine2(dropdownSubject, timer, (a, b) => a)
+        .listen((value) {
+      _fetchCoinList(value as String).then((result) {
+        print(result);
+        if (mounted) {
+          setState(() {
+            coinList = result;
+            rawCoinList = result;
+          });
+        }
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(widget.title),
+    return MaterialApp(
+      home: DefaultTabController(
+        length: 4,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(widget.title),
+          ),
+          bottomNavigationBar: _mainTabs(),
+          body: _getBody(widget),
+          // floatingActionButton: FloatingActionButton(
+          // onPressed: () {},
+          // tooltip: 'Increment',
+          // child: Icon(Icons.arrow_upward),
+          // ),
+          ),
       ),
-      body: SafeArea(
-          child: Center(
-            child: _getBody(coinList),
-          )),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        tooltip: 'Increment',
-        child: Icon(Icons.arrow_upward),
+    );
+  }
+  Widget _getBody(Widget w) {
+    return Container(
+      child: TabBarView(
+        children: [
+          _getPriceList(coinList),
+          Container(),
+          Container(),
+          Container(),
+        ],
       ),
     );
   }
 
-  Future<List<Coin>> _fetchCoinList() async {
+  Future<List<Coin>> _fetchCoinList(String value) async {
     final response = await http.get(Uri.parse(
-        'https://api.coinstats.app/public/v1/coins/?currency=USD&limit=20'));
+        'https://api.coinstats.app/public/v1/coins/?currency=$value&limit=20'));
 
     if (response.statusCode == 200) {
       List<Coin> res = List.empty();
-      List<Coin> coins = (jsonDecode(response.body)["coins"] as List).map((
-          data) => Coin.fromJson(data)).toList();
+      List<Coin> coins = (jsonDecode(response.body)["coins"] as List)
+          .map((data) => Coin.fromJson(data))
+          .toList();
       // List<dynamic> coins = jsonDecode(response.body)["coins"];
       // for (Map<String, dynamic> data in coins) {
       //   res += [Coin.fromJson(data)];
@@ -68,7 +96,21 @@ class _MyHomePageState extends BaseState<MyHomePage> {
     }
   }
 
-  Widget _getBody(List<Coin> coinList) {
+  Widget _getPriceList(List<Coin> coinList) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _getSearchForm()),
+            Expanded(child: _getCurrencyDropdown()),
+          ],
+        ),
+        Expanded(child: _getPrice(coinList)),
+      ],
+    );
+  }
+
+  Widget _getPrice(List<Coin> coinList) {
     return ListView.separated(
         itemBuilder: (ctx, index) {
           Coin c = coinList[index];
@@ -76,10 +118,14 @@ class _MyHomePageState extends BaseState<MyHomePage> {
             child: Row(
               children: [
                 SizedBox(width: 5),
-                Image.network(c.url, width: 50, height: 50,
+                Image.network(
+                  c.url,
+                  width: 50,
+                  height: 50,
                   errorBuilder: (ctx, error, trace) {
                     return Container(width: 30, height: 30);
-                  },),
+                  },
+                ),
                 SizedBox(width: 10),
                 Column(
                   children: [
@@ -147,16 +193,79 @@ class _MyHomePageState extends BaseState<MyHomePage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CoinDetail(id: c.id, name: c.name, imgUrl:c.url)),
+                MaterialPageRoute(
+                    builder: (context) =>
+                        CoinDetail(id: c.id, name: c.name, imgUrl: c.url)),
               );
             },
             style: ElevatedButton.styleFrom(
-                onPrimary: Colors.black54,
-                primary: Colors.white,
-              ),
+              onPrimary: Colors.black54,
+              primary: Colors.white,
+            ),
           );
         },
         separatorBuilder: (_, __) => Divider(),
         itemCount: coinList.length);
   }
+
+  Widget _getSearchForm() {
+    return TextField(
+      decoration: new InputDecoration(
+        hintText: 'Search...',
+      ),
+      onChanged: (String searchStr) {
+        setState(() {
+          if (searchStr.isEmpty) {
+            coinList = rawCoinList;
+          } else {
+            coinList = rawCoinList
+                .where((coin) =>
+                    coin.name.toLowerCase().contains(searchStr.toLowerCase()) ||
+                    coin.id.toLowerCase().contains(searchStr.toLowerCase()) ||
+                    coin.symbol.toLowerCase().contains(searchStr.toLowerCase()))
+                .toList();
+          }
+        });
+      },
+    );
+  }
+
+  Widget _getCurrencyDropdown() {
+    return DropdownButton(
+      menuMaxHeight: 400,
+      value: dropdownValue,
+      icon: Icon(Icons.keyboard_arrow_down),
+      items: items
+          .map((String items) =>
+              DropdownMenuItem(value: items, child: Text(items)))
+          .toList(),
+      // onChanged: (newValue) {setState(() {
+      //   this.dropdownValue.add(newValue as String);
+      //   // this.test = newValue;
+      // });},
+      onChanged: (newValue) {
+        this.dropdownSubject.add(newValue as String);
+        this.dropdownValue = newValue;
+      },
+    );
+  }
+}
+
+Widget _mainTabs() {
+  return Container(
+    color: Color(0xFF3F5AA6),
+    child: TabBar(
+      labelColor: Colors.white,
+      unselectedLabelColor: Colors.white70,
+      indicatorSize: TabBarIndicatorSize.tab,
+      indicatorPadding: EdgeInsets.all(5.0),
+      indicatorColor: Colors.blue,
+      tabs: [
+        Tab(text: "Price"),
+        Tab(text: "Assets"),
+        Tab(text: "Alert"),
+        Tab(text: "Transactions"),
+      ],
+    ),
+  );
 }

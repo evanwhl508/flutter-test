@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
@@ -59,16 +60,17 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           // tooltip: 'Increment',
           // child: Icon(Icons.arrow_upward),
           // ),
-          ),
+        ),
       ),
     );
   }
+
   Widget _getBody(Widget w) {
     return Container(
       child: TabBarView(
         children: [
           _getPriceList(coinList),
-          Container(),
+          _getAssetList(),
           Container(),
           Container(),
         ],
@@ -106,6 +108,102 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           ],
         ),
         Expanded(child: _getPrice(coinList)),
+      ],
+    );
+  }
+
+  Widget _getAssetList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: fetchBalance(),
+      builder:
+          (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+
+        if (snapshot.hasError) {
+          return Text("Something went wrong");
+        }
+
+        // if (snapshot.hasData && !snapshot.data!.exists) {
+        //   return Text("Document does not exist");
+        // }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Text("Loading");
+        }
+
+        // if (snapshot.connectionState == ConnectionState.done) {
+          print("data = ${snapshot.data}");
+          var res = snapshot.data as QuerySnapshot;
+          var assetList = res.docs;
+          print("res = ${res}");
+          print("docs = ${res.docs}, size = ${res.size}");
+          print("docs = ${(res.docs[0]).id}");
+          print("docs = ${(res.docs[0]).data()}");
+          // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+          return ListView.separated(
+              itemBuilder: (ctx, index) {
+                var asset = assetList[index];
+                return Row(children: [
+                  Expanded(child: Image.network(
+                    asset["imgUrl"],
+                    width: 50,
+                    height: 50,
+                    errorBuilder: (ctx, error, trace) {
+                      return Container(width: 30, height: 30);
+                    },
+                  ),
+                  ),
+                  Expanded(child: Text(asset["symbol"])),
+                  Expanded(child: Column(
+                    children: [
+                      Text(asset["amount"].toString()),
+                      Text("Value"),
+                    ],
+                  )),
+                ],);
+              },
+              separatorBuilder: (_, __) => Divider(),
+              itemCount: assetList.length);
+        // }
+
+        // return Text("loading");
+      },
+    );
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text("Current Asset"),
+            Checkbox(value: false, onChanged: (value) {},),
+          ],
+        ),
+        Row(
+          children: [
+            Text("12345.6789"),
+          ],
+        ),
+        Row(
+          children: [
+            Center(
+              child: TextButton(
+                style: ButtonStyle(
+                  foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                ),
+                onPressed: () {},
+                child: Text('Buy'),
+              ),
+            ),
+          ],
+        ),
+        // ListView.separated(
+        //     itemBuilder: (ctx, index) {
+        //       AssetList history = assetList[index];
+        //       return Row(children: [
+        //         Expanded(child: Text(history.getDatetime().toString())),
+        //         Expanded(child: Text(history.price.toString())),
+        //       ],);
+        //     },
+        //     separatorBuilder: (_, __) => Divider(),
+        //     itemCount: assetList.length)
       ],
     );
   }
@@ -220,9 +318,9 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           } else {
             coinList = rawCoinList
                 .where((coin) =>
-                    coin.name.toLowerCase().contains(searchStr.toLowerCase()) ||
-                    coin.id.toLowerCase().contains(searchStr.toLowerCase()) ||
-                    coin.symbol.toLowerCase().contains(searchStr.toLowerCase()))
+            coin.name.toLowerCase().contains(searchStr.toLowerCase()) ||
+                coin.id.toLowerCase().contains(searchStr.toLowerCase()) ||
+                coin.symbol.toLowerCase().contains(searchStr.toLowerCase()))
                 .toList();
           }
         });
@@ -237,7 +335,7 @@ class _MyHomePageState extends BaseState<MyHomePage> {
       icon: Icon(Icons.keyboard_arrow_down),
       items: items
           .map((String items) =>
-              DropdownMenuItem(value: items, child: Text(items)))
+          DropdownMenuItem(value: items, child: Text(items)))
           .toList(),
       // onChanged: (newValue) {setState(() {
       //   this.dropdownValue.add(newValue as String);
@@ -268,4 +366,10 @@ Widget _mainTabs() {
       ],
     ),
   );
+}
+
+Stream<QuerySnapshot> fetchBalance() {
+  CollectionReference balanceList = FirebaseFirestore.instance.collection('users/test/balance');
+// Call the user's CollectionReference to add a new user
+  return balanceList.snapshots();
 }

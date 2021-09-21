@@ -20,7 +20,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends BaseState<MyHomePage> {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -48,7 +47,7 @@ class _MyHomePageState extends BaseState<MyHomePage> {
         children: [
           PriceList(),
           _getAssetList(),
-          Container(),
+          _getPriceAlertList(),
           Container(),
         ],
       ),
@@ -58,9 +57,7 @@ class _MyHomePageState extends BaseState<MyHomePage> {
   Widget _getAssetList() {
     return StreamBuilder<QuerySnapshot>(
       stream: fetchBalance(),
-      builder:
-          (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) {
           return Text("Something went wrong");
         }
@@ -74,82 +71,98 @@ class _MyHomePageState extends BaseState<MyHomePage> {
         }
 
         // if (snapshot.connectionState == ConnectionState.done) {
-          print("data = ${snapshot.data}");
-          var res = snapshot.data as QuerySnapshot;
-          var assetList = res.docs;
-          print("res = ${res}");
-          print("docs = ${res.docs}, size = ${res.size}");
-          print("docs = ${(res.docs[0]).id}");
-          print("docs = ${(res.docs[0]).data()}");
-          // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
-          return ListView.separated(
-              itemBuilder: (ctx, index) {
-                var asset = assetList[index];
-                return Row(children: [
-                  Expanded(child: Image.network(
-                    asset["imgUrl"],
-                    width: 50,
-                    height: 50,
-                    errorBuilder: (ctx, error, trace) {
-                      return Container(width: 30, height: 30);
-                    },
-                  ),
+        print("data = ${snapshot.data}");
+        var res = snapshot.data as QuerySnapshot;
+        var assetList = res.docs;
+        print("res = ${res}");
+        print("docs = ${res.docs}, size = ${res.size}");
+        print("docs = ${(res.docs[0]).id}");
+        print("docs = ${(res.docs[0]).data()}");
+        // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+        return ListView.separated(
+            itemBuilder: (ctx, index) {
+              var asset = assetList[index];
+              return Row(
+                children: [
+                  Expanded(
+                    child: Image.network(
+                      asset["imgUrl"],
+                      width: 50,
+                      height: 50,
+                      errorBuilder: (ctx, error, trace) {
+                        return Container(width: 30, height: 30);
+                      },
+                    ),
                   ),
                   Expanded(child: Text(asset["symbol"])),
-                  Expanded(child: Column(
+                  Expanded(
+                      child: Column(
                     children: [
                       Text(asset["amount"].toString()),
                       Text("Value"),
                     ],
                   )),
-                ],);
-              },
-              separatorBuilder: (_, __) => Divider(),
-              itemCount: assetList.length);
+                ],
+              );
+            },
+            separatorBuilder: (_, __) => Divider(),
+            itemCount: assetList.length);
         // }
 
         // return Text("loading");
       },
     );
-    return Column(
-      children: [
-        Row(
-          children: [
-            Text("Current Asset"),
-            Checkbox(value: false, onChanged: (value) {},),
-          ],
-        ),
-        Row(
-          children: [
-            Text("12345.6789"),
-          ],
-        ),
-        Row(
-          children: [
-            Center(
-              child: TextButton(
-                style: ButtonStyle(
-                  foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                ),
-                onPressed: () {},
-                child: Text('Buy'),
-              ),
-            ),
-          ],
-        ),
-        // ListView.separated(
-        //     itemBuilder: (ctx, index) {
-        //       AssetList history = assetList[index];
-        //       return Row(children: [
-        //         Expanded(child: Text(history.getDatetime().toString())),
-        //         Expanded(child: Text(history.price.toString())),
-        //       ],);
-        //     },
-        //     separatorBuilder: (_, __) => Divider(),
-        //     itemCount: assetList.length)
-      ],
-    );
   }
+}
+
+Widget _getPriceAlertList() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: fetchAlertList(),
+    builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      if (snapshot.hasError) {
+        return Text("Something went wrong");
+      }
+
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Text("Loading");
+      }
+
+      // if (snapshot.connectionState == ConnectionState.done) {
+      var res = snapshot.data as QuerySnapshot;
+      var assetList = res.docs;
+      // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+      return ListView.separated(
+          itemBuilder: (ctx, index) {
+            var asset = assetList[index];
+            return Row(
+              children: [
+                Expanded(
+                  child: Text(asset["id"]),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(asset["price"].toString()),
+                      Text(asset["direction"]),
+                    ],
+                  ),
+                ),
+                Expanded(
+                    child: IconButton(
+                  icon: const Icon(Icons.cancel),
+                  tooltip: 'Delete Alert',
+                  onPressed: () {},
+                ))
+              ],
+            );
+          },
+          separatorBuilder: (_, __) => Divider(),
+          itemCount: assetList.length);
+      // }
+
+      // return Text("loading");
+    },
+  );
 }
 
 Widget _mainTabs() {
@@ -172,7 +185,15 @@ Widget _mainTabs() {
 }
 
 Stream<QuerySnapshot> fetchBalance() {
-  CollectionReference balanceList = FirebaseFirestore.instance.collection('users/test/balance');
+  CollectionReference balanceList =
+      FirebaseFirestore.instance.collection('users/test/balance');
 // Call the user's CollectionReference to add a new user
   return balanceList.snapshots();
+}
+
+Stream<QuerySnapshot> fetchAlertList() {
+  CollectionReference alertList =
+      FirebaseFirestore.instance.collection('users/test/price_alert');
+// Call the user's CollectionReference to add a new user
+  return alertList.snapshots();
 }

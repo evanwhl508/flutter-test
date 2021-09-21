@@ -51,7 +51,7 @@ class _PriceListState extends BaseState<PriceList> {
       body: _getPriceList(coinList),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        tooltip: 'Increment',
+        tooltip: 'Go To Top',
         child: Icon(Icons.arrow_upward),
       ),
     );

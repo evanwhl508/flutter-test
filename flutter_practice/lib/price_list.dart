@@ -28,7 +28,10 @@ class _PriceListState extends BaseState<PriceList> {
   @override
   void initState() {
     super.initState();
-    var timer = Stream.periodic(Duration(seconds: 10), (x) => x);
+    var timer = MergeStream([
+      TimerStream(0, Duration(seconds: 0)),
+      Stream.periodic(Duration(seconds: 10), (x) => x)
+    ]);
     dropdownSubject.add("USD");
     CombineLatestStream.combine2(dropdownSubject, timer, (a, b) => a)
         .listen((value) {

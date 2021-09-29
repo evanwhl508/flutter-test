@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
@@ -7,6 +8,7 @@ import 'package:rxdart/rxdart.dart';
 import 'base/base_stateless_widget.dart';
 import 'coin_details.dart';
 import 'entity/coin.dart';
+import 'entity/user_price_alert.dart';
 
 class PriceList extends StatefulWidget {
   PriceList({Key? key}) : super(key: key);
@@ -164,7 +166,8 @@ class _PriceListState extends BaseState<PriceList> {
                       icon: const Icon(Icons.add_alert),
                       tooltip: 'Set alert',
                       onPressed: () {
-                        setState(() {});
+                        // addPriceAlert(c, "1", "upper");
+                        showPriceAlertDialog(context, c);
                       },
                     ),
                   ],
@@ -176,7 +179,7 @@ class _PriceListState extends BaseState<PriceList> {
                 context,
                 MaterialPageRoute(
                     builder: (context) =>
-                        CoinDetail(id: c.id, name: c.name, imgUrl: c.url)),
+                        CoinDetail(coin: c)),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -229,5 +232,62 @@ class _PriceListState extends BaseState<PriceList> {
         this.dropdownValue = newValue;
       },
     );
+  }
+
+  showPriceAlertDialog(BuildContext context, Coin coin) {
+    TextEditingController _textFieldController = TextEditingController();
+    String inputValue = "0";
+
+    AlertDialog dialog = AlertDialog(
+      title: Text("Price Alert to ${coin.name}"),
+      content: TextField(
+        onChanged: (value) {
+          inputValue = value;
+        },
+        controller: _textFieldController,
+        decoration: InputDecoration(hintText: "Alert price of ${coin.name}"),
+      ),
+      actions: [
+        ElevatedButton(
+            child: Text("Upper"),
+            onPressed: () {
+              addPriceAlert(coin, inputValue, "upper");
+              Navigator.of(context, rootNavigator: true).pop(true);
+            }
+        ),
+        ElevatedButton(
+            child: Text("Lower"),
+            onPressed: () {
+              addPriceAlert(coin, inputValue, "lower");
+              Navigator.of(context, rootNavigator: true).pop(true);
+            }
+        ),
+        ElevatedButton(
+            child: Text("Cancel"),
+            onPressed: () {
+              inputValue = "0";
+              Navigator.of(context, rootNavigator: true).pop(false);
+            }
+        ),
+      ],
+    );
+
+    // Show the dialog
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return dialog;
+        }
+    );
+  }
+
+  Future<void> addPriceAlert(Coin coin, String price, String direction) {
+    CollectionReference alertList = FirebaseFirestore.instance.collection('users/test/price_alert');
+    int timestamp = DateTime.now().millisecondsSinceEpoch;
+    UserPriceAlert pa = UserPriceAlert(id: coin.id, price: price, timestamp: timestamp, direction: direction);
+    return alertList
+        .add(pa.toJson())
+        .then((value) => print("Price Alert Added"))
+        .catchError((error) => print("Failed to add alert: $error"));
   }
 }

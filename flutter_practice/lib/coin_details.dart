@@ -1,20 +1,20 @@
 import 'dart:convert';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_practice/base/base_stateless_widget.dart';
 import 'package:flutter_practice/entity/coin_info.dart';
 import 'package:http/http.dart' as http;
 
+import 'entity/coin.dart';
 import 'entity/coin_exchange.dart';
 import 'entity/coin_price_history.dart';
 
 class CoinDetail extends StatefulWidget {
-  CoinDetail({Key? key, required this.id, required this.name, required this.imgUrl}) : super(key: key);
+  CoinDetail({Key? key, required this.coin}) : super(key: key);
 
-  final String id;
-  final String name;
-  final String imgUrl;
+  final Coin coin;
 
   @override
   _CoinDetailState createState() => _CoinDetailState();
@@ -43,14 +43,14 @@ class _CoinDetailState extends BaseState<CoinDetail> {
               Row(
                 children: [
                   Image.network(
-                    widget.imgUrl,
+                    widget.coin.url,
                     width: 50,
                     height: 50,
                     errorBuilder: (ctx, error, trace) {
                       return Container(width: 30, height: 30);
                     },
                   ),
-                  Text(widget.name),
+                  Text(widget.coin.name),
                 ],
               ),
               Row(
@@ -59,14 +59,23 @@ class _CoinDetailState extends BaseState<CoinDetail> {
                     style: ButtonStyle(
                       foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
                     ),
-                    onPressed: () { },
+                    onPressed: () {
+                      // TODO: pop up a dialog for input amount
+                      // buyCoin("test", widget.imgUrl, widget.id, 1.1, widget.price);
+                      showTradeDialog(context, widget.coin, "buy");
+                    },
                     child: Text('Buy'),
                   ),
                   TextButton(
                     style: ButtonStyle(
                       foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
                     ),
-                    onPressed: () { },
+                    onPressed: () {
+                      // TODO: pop up a dialog for input amount
+                      // TODO: call sell function
+                      showTradeDialog(context, widget.coin, "sell");
+
+                    },
                     child: Text('Sell'),
                   ),
                 ],
@@ -75,9 +84,9 @@ class _CoinDetailState extends BaseState<CoinDetail> {
                 height: 500,
                 child: TabBarView(
                   children: [
-                    _coinInfo(widget.id),
-                    _coinPriceHistory(widget.id),
-                    _coinExchange(widget.id),
+                    _coinInfo(widget.coin.id),
+                    _coinPriceHistory(widget.coin.id),
+                    _coinExchange(widget.coin.id),
                   ],
                 ),
               ),
@@ -240,6 +249,51 @@ Widget _coinExchange(String coinId) {
   );
 }
 
+showTradeDialog(BuildContext context, Coin coin, String action) {
+  TextEditingController _textFieldController = TextEditingController();
+  num inputValue = 0;
+
+  AlertDialog dialog = AlertDialog(
+    title: Text("$action ${coin.name}"),
+    content: TextField(
+      onChanged: (value) {
+        inputValue = double.parse(value);
+      },
+      controller: _textFieldController,
+      decoration: InputDecoration(hintText: "Amount to $action"),
+    ),
+    actions: [
+      ElevatedButton(
+          child: Text("OK"),
+          onPressed: () {
+            if (action == "buy") {
+              buyCoin("test", coin.url, coin.id, inputValue, coin.price);
+            }
+            else if (action == "sell") {
+              sellCoin("test", coin.url, coin.id, inputValue, coin.price);
+            }
+            Navigator.of(context, rootNavigator: true).pop(true);
+          }
+      ),
+      ElevatedButton(
+          child: Text("Cancel"),
+          onPressed: () {
+            inputValue = 0;
+            Navigator.of(context, rootNavigator: true).pop(false);
+          }
+      ),
+    ],
+  );
+
+  // Show the dialog
+  showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return dialog;
+      }
+  );
+}
+
 Future<CoinInfo> _fetchCoinInfo(String coinId) async {
   print("coin id = $coinId");
   final response = await http.get(Uri.parse(
@@ -277,4 +331,28 @@ Future<List<CoinExchange>> _fetchCoinExchange(String coinId) async {
   } else {
     throw Exception('Failed to fetch coin info.');
   }
+}
+
+Future<void> buyCoin(String username, String imgUrl, String pair, num amount, num price) async {
+  HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('buyCoin');
+  final results = await callable.call(<String, dynamic>{
+    'username': username,
+    'imgUrl': imgUrl,
+    'pair': pair,
+    'amount': amount,
+    'price': price,
+  }).then((value) => {print(value.data)})
+      .onError((error, stackTrace) => {print("Error when buy coin")});
+}
+
+Future<void> sellCoin(String username, String imgUrl, String pair, num amount, num price) async {
+  HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('sellCoin');
+  final results = await callable.call(<String, dynamic>{
+    'username': username,
+    'imgUrl': imgUrl,
+    'pair': pair,
+    'amount': amount,
+    'price': price,
+  }).then((value) => {print(value.data)})
+      .onError((error, stackTrace) => {print("Error when buy coin")});
 }

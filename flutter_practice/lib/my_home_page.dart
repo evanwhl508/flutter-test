@@ -1,14 +1,9 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_practice/price_list.dart';
-import 'package:http/http.dart' as http;
-import 'package:rxdart/rxdart.dart';
+import 'package:intl/intl.dart';
 
 import 'base/base_stateless_widget.dart';
-import 'coin_details.dart';
-import 'entity/coin.dart';
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -48,7 +43,7 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           PriceList(),
           _getAssetList(),
           _getPriceAlertList(),
-          Container(),
+          _getUserTransactions(),
         ],
       ),
     );
@@ -165,6 +160,65 @@ Widget _getPriceAlertList() {
   );
 }
 
+Widget _getUserTransactions() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: fetchTransactions(),
+    builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      if (snapshot.hasError) {
+        return Text("Something went wrong");
+      }
+
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Text("Loading");
+      }
+
+      // if (snapshot.connectionState == ConnectionState.done) {
+      var res = snapshot.data as QuerySnapshot;
+      var assetList = res.docs;
+      // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      return ListView.separated(
+          itemBuilder: (ctx, index) {
+            var asset = assetList[index];
+            DateTime datetime = DateTime.fromMillisecondsSinceEpoch(asset["timestamp"]);
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(asset["symbol"]),
+                    ),
+                    Expanded(
+                      child: Text(asset["amount"].toString(), textAlign: TextAlign.end,),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(asset["direction"]),
+                    ),
+                    Expanded(
+                      child: Text(formatter.format(datetime)),
+                    ),
+                    Expanded(
+                      child: Text(asset["price"].toString()),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+          separatorBuilder: (_, __) => Divider(),
+          itemCount: assetList.length);
+      // }
+
+      // return Text("loading");
+    },
+  );
+}
+
 Widget _mainTabs() {
   return Container(
     color: Color(0xFF3F5AA6),
@@ -196,4 +250,11 @@ Stream<QuerySnapshot> fetchAlertList() {
       FirebaseFirestore.instance.collection('users/test/price_alert');
 // Call the user's CollectionReference to add a new user
   return alertList.snapshots();
+}
+
+Stream<QuerySnapshot> fetchTransactions() {
+  CollectionReference transactions =
+      FirebaseFirestore.instance.collection('users/test/transaction');
+// Call the user's CollectionReference to add a new user
+  return transactions.snapshots();
 }

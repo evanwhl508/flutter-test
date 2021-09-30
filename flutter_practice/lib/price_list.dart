@@ -30,21 +30,30 @@ class _PriceListState extends BaseState<PriceList> {
     super.initState();
     var timer = MergeStream([
       TimerStream(0, Duration(seconds: 0)),
-      Stream.periodic(Duration(seconds: 10), (x) => x)
+      Stream.periodic(Duration(seconds: 60), (x) => x)
     ]);
     dropdownSubject.add("USD");
     CombineLatestStream.combine2(dropdownSubject, timer, (a, b) => a)
         .listen((value) {
-      _fetchCoinList(value as String).then((result) {
-        print(result);
-        if (mounted) {
-          setState(() {
-            coinList = result;
-            rawCoinList = result;
+          _fetchCoinList(value as String).then((result) {
+            _fetchFavCoinList().forEach((element) {
+              print("value = $element");
+              result.forEach((coin) {
+                if (element.docs.map((e) => e.id).contains(coin.id)) {
+                  coin.isFav = true;
+                }
+              });
+              if (mounted) {
+                setState(() {
+                  coinList = result;
+                  rawCoinList = result;
+                });
+              }
+            }).onError((error, stackTrace) {
+                  print("error = $error");
+            });
           });
-        }
-      });
-    });
+       });
   }
 
   @override
@@ -71,12 +80,7 @@ class _PriceListState extends BaseState<PriceList> {
       List<Coin> coins = (jsonDecode(response.body)["coins"] as List)
           .map((data) => Coin.fromJson(data))
           .toList();
-      // List<dynamic> coins = jsonDecode(response.body)["coins"];
-      // for (Map<String, dynamic> data in coins) {
-      //   res += [Coin.fromJson(data)];
-      // }
       return coins;
-      // return res;
     } else {
       throw Exception('Failed to load album');
     }
@@ -162,6 +166,7 @@ class _PriceListState extends BaseState<PriceList> {
                         setState(() {
                           print("c.isFav = ${c.isFav}");
                           c.isFav = !c.isFav;
+                          handleFavCoin(c);
                         });
                       },
                     ),
@@ -226,10 +231,6 @@ class _PriceListState extends BaseState<PriceList> {
           .map((String items) =>
           DropdownMenuItem(value: items, child: Text(items)))
           .toList(),
-      // onChanged: (newValue) {setState(() {
-      //   this.dropdownValue.add(newValue as String);
-      //   // this.test = newValue;
-      // });},
       onChanged: (newValue) {
         this.dropdownSubject.add(newValue as String);
         this.dropdownValue = newValue;
@@ -283,14 +284,48 @@ class _PriceListState extends BaseState<PriceList> {
         }
     );
   }
+}
 
-  Future<void> addPriceAlert(Coin coin, String price, String direction) {
-    CollectionReference alertList = FirebaseFirestore.instance.collection('users/test/price_alert');
-    int timestamp = DateTime.now().millisecondsSinceEpoch;
-    UserPriceAlert pa = UserPriceAlert(id: coin.id, price: price, timestamp: timestamp, direction: direction);
-    return alertList
-        .add(pa.toJson())
-        .then((value) => print("Price Alert Added"))
-        .catchError((error) => print("Failed to add alert: $error"));
+Future<void> addPriceAlert(Coin coin, String price, String direction) {
+  CollectionReference alertList = FirebaseFirestore.instance.collection(
+      'users/test/price_alert');
+  int timestamp = DateTime
+      .now()
+      .millisecondsSinceEpoch;
+  UserPriceAlert pa = UserPriceAlert(
+      id: coin.id, price: price, timestamp: timestamp, direction: direction);
+  return alertList
+      .add(pa.toJson())
+      .then((value) => print("Price Alert Added"))
+      .catchError((error) => print("Failed to add alert: $error"));
+}
+
+Future<void> handleFavCoin(Coin coin) {
+  CollectionReference favCoinCollection = FirebaseFirestore.instance.collection(
+      'users/test/fav_coin');
+  Map<String, dynamic> favCoinJson = {
+    "id": coin.id,
+    "type": "spot"
+  };
+  if (coin.isFav) {
+    return favCoinCollection
+        .doc(coin.id)
+        .set(favCoinJson, SetOptions(merge: true),)
+        .then((value) => print("----- Fav Coin Added"))
+        .catchError((error) => print("----- Failed to add fav coin: $error"));
   }
+  else {
+    return favCoinCollection.where('id', isEqualTo: coin.id).get().then((
+        value) {
+      favCoinCollection.doc(coin.id).delete()
+          .then((value) => print("----- Fav Coin deleted"))
+          .catchError((error) => print("----- Failed to delete fav coin: $error"));
+    });
+  }
+}
+
+Stream<QuerySnapshot> _fetchFavCoinList() {
+  CollectionReference favCoinList =
+  FirebaseFirestore.instance.collection('users/test/fav_coin');
+  return favCoinList.snapshots();
 }

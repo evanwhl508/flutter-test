@@ -66,13 +66,13 @@ class _MyHomePageState extends BaseState<MyHomePage> {
         }
 
         // if (snapshot.connectionState == ConnectionState.done) {
-        print("data = ${snapshot.data}");
+        // print("data = ${snapshot.data}");
         var res = snapshot.data as QuerySnapshot;
         var assetList = res.docs;
-        print("res = ${res}");
-        print("docs = ${res.docs}, size = ${res.size}");
-        print("docs = ${(res.docs[0]).id}");
-        print("docs = ${(res.docs[0]).data()}");
+        // print("res = ${res}");
+        // print("docs = ${res.docs}, size = ${res.size}");
+        // print("docs = ${(res.docs[0]).id}");
+        // print("docs = ${(res.docs[0]).data()}");
         // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
         return ListView.separated(
             itemBuilder: (ctx, index) {

@@ -295,7 +295,7 @@ showTradeDialog(BuildContext context, Coin coin, String action) {
 }
 
 Future<CoinInfo> _fetchCoinInfo(String coinId) async {
-  print("coin id = $coinId");
+  // print("coin id = $coinId");
   final response = await http.get(Uri.parse(
       'https://api.coinstats.app/public/v1/coins/$coinId?currency=USD'));
   if (response.statusCode == 200) {
@@ -307,7 +307,7 @@ Future<CoinInfo> _fetchCoinInfo(String coinId) async {
 }
 
 Future<List<CoinPriceHistory>> _fetchCoinPriceHistory(String coinId) async {
-  print("coin id = $coinId");
+  // print("coin id = $coinId");
   final response = await http.get(Uri.parse(
       'https://api.coinstats.app/public/v1/charts?period=24h&coinId=$coinId'));
 
@@ -321,7 +321,7 @@ Future<List<CoinPriceHistory>> _fetchCoinPriceHistory(String coinId) async {
 }
 
 Future<List<CoinExchange>> _fetchCoinExchange(String coinId) async {
-  print("coin id = $coinId");
+  // print("coin id = $coinId");
   final response = await http.get(Uri.parse(
       'https://api.coinstats.app/public/v1/markets?coinId=$coinId'));
   if (response.statusCode == 200) {

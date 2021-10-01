@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_practice/price_list.dart';
+import 'package:flutter_practice/user_assets.dart';
 import 'package:intl/intl.dart';
 
 import 'base/base_stateless_widget.dart';
@@ -41,7 +42,7 @@ class _MyHomePageState extends BaseState<MyHomePage> {
       child: TabBarView(
         children: [
           PriceList(),
-          _getAssetList(),
+          UserAssets(),
           _getPriceAlertList(),
           _getUserTransactions(),
         ],
@@ -74,34 +75,55 @@ class _MyHomePageState extends BaseState<MyHomePage> {
         // print("docs = ${(res.docs[0]).id}");
         // print("docs = ${(res.docs[0]).data()}");
         // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
-        return ListView.separated(
-            itemBuilder: (ctx, index) {
-              var asset = assetList[index];
-              return Row(
-                children: [
-                  Expanded(
-                    child: Image.network(
-                      asset["imgUrl"],
-                      width: 50,
-                      height: 50,
-                      errorBuilder: (ctx, error, trace) {
-                        return Container(width: 30, height: 30);
-                      },
-                    ),
+        return Column(
+          children: [
+            Row(
+              children: [
+                Center(child:
+                TextButton(
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
                   ),
-                  Expanded(child: Text(asset["symbol"])),
-                  Expanded(
-                      child: Column(
-                    children: [
-                      Text(asset["amount"].toString()),
-                      Text("Value"),
-                    ],
-                  )),
-                ],
-              );
-            },
-            separatorBuilder: (_, __) => Divider(),
-            itemCount: assetList.length);
+                  onPressed: () {
+                  },
+                  child: Text('Deposit'),
+                ),),
+              ],
+            ),
+            Expanded(
+              child: ListView.separated(
+
+                  itemBuilder: (ctx, index) {
+                    var asset = assetList[index];
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Image.network(
+                            asset["imgUrl"],
+                            width: 50,
+                            height: 50,
+                            errorBuilder: (ctx, error, trace) {
+                              return Container(width: 30, height: 30);
+                            },
+                          ),
+                        ),
+                        Expanded(child: Text(asset["symbol"])),
+                        Spacer(flex: 1,),
+                        Expanded(
+                            child: Column(
+                          children: [
+                            Text(asset["amount"].toString()),
+                            Text("Value"),
+                          ],
+                        )),
+                      ],
+                    );
+                  },
+                  separatorBuilder: (_, __) => Divider(),
+                  itemCount: assetList.length),
+            ),
+          ],
+        );
         // }
 
         // return Text("loading");
@@ -190,20 +212,25 @@ Widget _getUserTransactions() {
                       child: Text(asset["symbol"]),
                     ),
                     Expanded(
-                      child: Text(asset["amount"].toString(), textAlign: TextAlign.end,),
+                      child: Text(asset["amount"].toStringAsFixed(2), textAlign: TextAlign.end,),
                     ),
                   ],
                 ),
                 Row(
                   children: [
                     Expanded(
-                      child: Text(asset["direction"]),
+                      child: Text(asset["direction"],
+                                  style: new TextStyle(
+                                    fontSize: 15,
+                                    color: updateTransactionTypeColor(asset["direction"]),
+                                  ),
+                      ),
                     ),
                     Expanded(
                       child: Text(formatter.format(datetime)),
                     ),
                     Expanded(
-                      child: Text(asset["price"].toString()),
+                      child: Text(asset["price"].toStringAsFixed(2), textAlign: TextAlign.end,),
                     ),
                   ],
                 ),
@@ -257,4 +284,12 @@ Stream<QuerySnapshot> fetchTransactions() {
       FirebaseFirestore.instance.collection('users/test/transaction');
 // Call the user's CollectionReference to add a new user
   return transactions.snapshots();
+}
+
+Color updateTransactionTypeColor(String type) {
+  if (type == "buy") return Colors.green;
+  if (type == "sell") return Colors.red;
+  if (type == "deposit") return Colors.orangeAccent;
+  return Colors.grey;
+
 }

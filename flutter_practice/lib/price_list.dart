@@ -21,6 +21,7 @@ class PriceList extends StatefulWidget {
 class _PriceListState extends BaseState<PriceList> {
   List<Coin> rawCoinList = List.empty();
   List<Coin> coinList = List.empty();
+  List<String> favCoinList = List.empty();
   var dropdownSubject = BehaviorSubject<String>();
   List<String> items = ["USD", "HKD", "GBP", "JPY"];
   String dropdownValue = "USD";
@@ -37,9 +38,8 @@ class _PriceListState extends BaseState<PriceList> {
         .listen((value) {
           _fetchCoinList(value as String).then((result) {
             _fetchFavCoinList().forEach((element) {
-              print("value = $element");
               result.forEach((coin) {
-                if (element.docs.map((e) => e.id).contains(coin.id)) {
+                if (favCoinList.contains(coin.id)) {
                   coin.isFav = true;
                 }
               });
@@ -54,6 +54,18 @@ class _PriceListState extends BaseState<PriceList> {
             });
           });
        });
+    _fetchFavCoinList().listen((event) {
+      favCoinList = event.docs.map((e) => e.id).toList();
+      if (coinList.isNotEmpty) {
+        coinList.forEach((coin) {
+          if (favCoinList.contains(coin.id)) {
+            coin.isFav = true;
+          }
+        });
+      }
+    }).onError((error, stackTrace) {
+      print("error = $error");
+    });
   }
 
   @override
@@ -147,6 +159,7 @@ class _PriceListState extends BaseState<PriceList> {
                       c.priceChange1d.toStringAsFixed(2) + '%',
                       style: new TextStyle(
                         fontSize: 15,
+                        color: getPriceChangeColor(c.priceChange1d),
                       ),
                     ),
                   ],
@@ -328,4 +341,10 @@ Stream<QuerySnapshot> _fetchFavCoinList() {
   CollectionReference favCoinList =
   FirebaseFirestore.instance.collection('users/test/fav_coin');
   return favCoinList.snapshots();
+}
+
+Color getPriceChangeColor(num value) {
+  if (value < 0) return Colors.red;
+  if (value > 0) return Colors.green;
+  return Colors.grey;
 }

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 
 import 'base/base_stateless_widget.dart';
+import 'login.dart';
 import 'my_home_page.dart';
 
 
@@ -31,7 +32,8 @@ class MyApp extends BaseStatelessWidget {
             theme: ThemeData(
               primarySwatch: Colors.blue,
             ),
-            home: MyHomePage(title: 'Crypto Flutter Version'),
+            // home: MyHomePage(title: 'Crypto Flutter Version'),
+            home: Login(),
           );
         }
 

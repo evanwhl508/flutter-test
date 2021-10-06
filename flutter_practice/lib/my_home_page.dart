@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_practice/price_list.dart';
 import 'package:flutter_practice/user_assets.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_practice/type_define.dart';
 
 import 'base/base_stateless_widget.dart';
 

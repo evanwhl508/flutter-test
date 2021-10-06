@@ -8,11 +8,18 @@ abstract class BaseViewModel extends ChangeNotifier {
 
 abstract class BaseMVVMState<T extends StatefulWidget, VM extends BaseViewModel>
     extends BaseState<T> {
+  late VM viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel = buildViewModel();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-        create: (_) => buildViewModel(),
+        create: (_) => viewModel,
         child: Consumer<VM>(
           builder: (ctx, vm, _) => buildChild(ctx, vm),
         )

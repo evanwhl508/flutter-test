@@ -32,8 +32,8 @@ class MyApp extends BaseStatelessWidget {
             theme: ThemeData(
               primarySwatch: Colors.blue,
             ),
-            // home: MyHomePage(title: 'Crypto Flutter Version'),
-            home: Login(),
+            home: MyHomePage(title: 'Crypto Flutter Version'),
+            // home: Login(),
           );
         }
 

@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_practice/type_define.dart';
 
-typedef DisposeBag = List<StreamSubscription>;
 
 abstract class BaseStatelessWidget extends StatelessWidget {}
 

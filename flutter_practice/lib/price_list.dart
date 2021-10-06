@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_practice/ext/stream_subscription.dart';
+import 'package:flutter_practice/price_list_view_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
 
-import 'base/base_stateless_widget.dart';
+import 'base/base_view_model.dart';
 import 'coin_details.dart';
 import 'entity/coin.dart';
 import 'entity/user_price_alert.dart';
@@ -18,13 +20,7 @@ class PriceList extends StatefulWidget {
   _PriceListState createState() => _PriceListState();
 }
 
-class _PriceListState extends BaseState<PriceList> {
-  List<Coin> rawCoinList = List.empty();
-  List<Coin> coinList = List.empty();
-  List<String> favCoinList = List.empty();
-  var dropdownSubject = BehaviorSubject<String>();
-  List<String> items = ["USD", "HKD", "GBP", "JPY"];
-  String dropdownValue = "USD";
+class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
 
   @override
   void initState() {
@@ -33,54 +29,25 @@ class _PriceListState extends BaseState<PriceList> {
       TimerStream(0, Duration(seconds: 0)),
       Stream.periodic(Duration(seconds: 60), (x) => x)
     ]);
-    dropdownSubject.add("USD");
-    CombineLatestStream.combine2(dropdownSubject, timer, (a, b) => a)
+    viewModel.setDropdownValue("USD");
+    CombineLatestStream.combine2(viewModel.dropdownSubject, timer, (a, b) => a)
         .listen((value) {
           _fetchCoinList(value as String).then((result) {
             _fetchFavCoinList().forEach((element) {
               result.forEach((coin) {
-                if (favCoinList.contains(coin.id)) {
+                if (viewModel.favCoinList.contains(coin.id)) {
                   coin.isFav = true;
                 }
               });
-              if (mounted) {
-                setState(() {
-                  coinList = result;
-                  rawCoinList = result;
-                });
-              }
+              viewModel.setCoinList(result);
             }).onError((error, stackTrace) {
                   print("error = $error");
             });
           });
-       });
+       }).disposedBy(disposeBag);
     _fetchFavCoinList().listen((event) {
-      favCoinList = event.docs.map((e) => e.id).toList();
-      if (coinList.isNotEmpty) {
-        coinList.forEach((coin) {
-          if (favCoinList.contains(coin.id)) {
-            coin.isFav = true;
-          }
-        });
-      }
-    }).onError((error, stackTrace) {
-      print("error = $error");
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // appBar: AppBar(
-      //   title: Text("Price List"),
-      // ),
-      body: _getPriceList(coinList),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        tooltip: 'Go To Top',
-        child: Icon(Icons.arrow_upward),
-      ),
-    );
+      viewModel.setFavCoinIdsList(event.docs.map((e) => e.id).toList());
+    }).disposedBy(disposeBag);
   }
 
   Future<List<Coin>> _fetchCoinList(String value) async {
@@ -88,7 +55,6 @@ class _PriceListState extends BaseState<PriceList> {
         'https://api.coinstats.app/public/v1/coins/?currency=$value&limit=20'));
 
     if (response.statusCode == 200) {
-      List<Coin> res = List.empty();
       List<Coin> coins = (jsonDecode(response.body)["coins"] as List)
           .map((data) => Coin.fromJson(data))
           .toList();
@@ -98,24 +64,24 @@ class _PriceListState extends BaseState<PriceList> {
     }
   }
 
-  Widget _getPriceList(List<Coin> coinList) {
+  Widget _getPriceList(PriceListViewModel vm) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _getSearchForm()),
-            Expanded(child: _getCurrencyDropdown()),
+            Expanded(child: _getSearchForm(vm)),
+            Expanded(child: _getCurrencyDropdown(vm)),
           ],
         ),
-        Expanded(child: _getPrice(coinList)),
+        Expanded(child: _getPrice(vm)),
       ],
     );
   }
 
-  Widget _getPrice(List<Coin> coinList) {
+  Widget _getPrice(PriceListViewModel vm) {
     return ListView.separated(
         itemBuilder: (ctx, index) {
-          Coin c = coinList[index];
+          Coin c = vm.coinList[index];
           return ElevatedButton(
             child: Row(
               children: [
@@ -176,11 +142,7 @@ class _PriceListState extends BaseState<PriceList> {
                       splashRadius: 25.0,
                       tooltip: 'Set favourite',
                       onPressed: () {
-                        setState(() {
-                          print("c.isFav = ${c.isFav}");
-                          c.isFav = !c.isFav;
-                          handleFavCoin(c);
-                        });
+                        vm.setFavCoin(index);
                       },
                     ),
                     IconButton(
@@ -210,43 +172,33 @@ class _PriceListState extends BaseState<PriceList> {
           );
         },
         separatorBuilder: (_, __) => Divider(),
-        itemCount: coinList.length);
+        itemCount: vm.coinList.length);
   }
 
-  Widget _getSearchForm() {
+  Widget _getSearchForm(PriceListViewModel vm) {
     return TextField(
       decoration: new InputDecoration(
         hintText: 'Search...',
       ),
       onChanged: (String searchStr) {
-        setState(() {
-          if (searchStr.isEmpty) {
-            coinList = rawCoinList;
-          } else {
-            coinList = rawCoinList
-                .where((coin) =>
-            coin.name.toLowerCase().contains(searchStr.toLowerCase()) ||
-                coin.id.toLowerCase().contains(searchStr.toLowerCase()) ||
-                coin.symbol.toLowerCase().contains(searchStr.toLowerCase()))
-                .toList();
-          }
-        });
+        vm.setSearchForm(searchStr);
       },
     );
   }
 
-  Widget _getCurrencyDropdown() {
+  Widget _getCurrencyDropdown(PriceListViewModel vm) {
     return DropdownButton(
       menuMaxHeight: 400,
-      value: dropdownValue,
+      value: vm.dropdownValue,
       icon: Icon(Icons.keyboard_arrow_down),
-      items: items
+      items: vm.items
           .map((String items) =>
           DropdownMenuItem(value: items, child: Text(items)))
           .toList(),
       onChanged: (newValue) {
-        this.dropdownSubject.add(newValue as String);
-        this.dropdownValue = newValue;
+        vm.setDropdownValue(newValue as String);
+        // this.dropdownSubject.add(newValue as String);
+        // this.dropdownValue = newValue;
       },
     );
   }
@@ -297,6 +249,24 @@ class _PriceListState extends BaseState<PriceList> {
         }
     );
   }
+
+  @override
+  Widget buildChild(ctx, vm) {
+    return Scaffold(
+      // appBar: AppBar(
+      //   title: Text("Price List"),
+      // ),
+      body: _getPriceList(vm),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        tooltip: 'Go To Top',
+        child: Icon(Icons.arrow_upward),
+      ),
+    );
+  }
+
+  @override
+  PriceListViewModel buildViewModel() => PriceListViewModel();
 }
 
 Future<void> addPriceAlert(Coin coin, String price, String direction) {
@@ -311,30 +281,6 @@ Future<void> addPriceAlert(Coin coin, String price, String direction) {
       .add(pa.toJson())
       .then((value) => print("Price Alert Added"))
       .catchError((error) => print("Failed to add alert: $error"));
-}
-
-Future<void> handleFavCoin(Coin coin) {
-  CollectionReference favCoinCollection = FirebaseFirestore.instance.collection(
-      'users/test/fav_coin');
-  Map<String, dynamic> favCoinJson = {
-    "id": coin.id,
-    "type": "spot"
-  };
-  if (coin.isFav) {
-    return favCoinCollection
-        .doc(coin.id)
-        .set(favCoinJson, SetOptions(merge: true),)
-        .then((value) => print("----- Fav Coin Added"))
-        .catchError((error) => print("----- Failed to add fav coin: $error"));
-  }
-  else {
-    return favCoinCollection.where('id', isEqualTo: coin.id).get().then((
-        value) {
-      favCoinCollection.doc(coin.id).delete()
-          .then((value) => print("----- Fav Coin deleted"))
-          .catchError((error) => print("----- Failed to delete fav coin: $error"));
-    });
-  }
 }
 
 Stream<QuerySnapshot> _fetchFavCoinList() {

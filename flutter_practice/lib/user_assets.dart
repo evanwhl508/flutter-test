@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_practice/base/base_stateless_widget.dart';
+import 'package:flutter_practice/repo/coin_repo.dart';
 import 'package:http/http.dart' as http;
 
 import 'entity/coin.dart';
@@ -50,7 +51,7 @@ class _UserAssetsState extends BaseState<UserAssets> {
           assetValueDict[element.data()["symbol"]] = 0;
         });
         return FutureBuilder(
-            future: _fetchCoinList("USD"),
+            future: CoinRepo.fetchCoinList("USD"),
             builder: (context, priceSnapshot) {
               // Check for errors
               if (priceSnapshot.hasError) {
@@ -169,20 +170,6 @@ Stream<QuerySnapshot> fetchBalance() {
   CollectionReference balanceList =
       FirebaseFirestore.instance.collection('users/test/balance');
   return balanceList.snapshots();
-}
-
-Future<List<Coin>> _fetchCoinList(String value) async {
-  final response = await http.get(Uri.parse(
-      'https://api.coinstats.app/public/v1/coins/?currency=$value&limit=20'));
-
-  if (response.statusCode == 200) {
-    List<Coin> coins = (jsonDecode(response.body)["coins"] as List)
-        .map((data) => Coin.fromJson(data))
-        .toList();
-    return coins;
-  } else {
-    throw Exception('Failed to load album');
-  }
 }
 
 Future<void> deposit(num initAmount, num adjAmount) {

@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_practice/ext/stream_subscription.dart';
 import 'package:flutter_practice/price_list_view_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_practice/repo/coin_repo.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'base/base_view_model.dart';
@@ -32,7 +30,7 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
     viewModel.setDropdownValue("USD");
     CombineLatestStream.combine2(viewModel.dropdownSubject, timer, (a, b) => a)
         .listen((value) {
-          _fetchCoinList(value as String).then((result) {
+          CoinRepo.fetchCoinList(value as String).then((result) {
             _fetchFavCoinList().forEach((element) {
               result.forEach((coin) {
                 if (viewModel.favCoinList.contains(coin.id)) {
@@ -48,20 +46,6 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
     _fetchFavCoinList().listen((event) {
       viewModel.setFavCoinIdsList(event.docs.map((e) => e.id).toList());
     }).disposedBy(disposeBag);
-  }
-
-  Future<List<Coin>> _fetchCoinList(String value) async {
-    final response = await http.get(Uri.parse(
-        'https://api.coinstats.app/public/v1/coins/?currency=$value&limit=20'));
-
-    if (response.statusCode == 200) {
-      List<Coin> coins = (jsonDecode(response.body)["coins"] as List)
-          .map((data) => Coin.fromJson(data))
-          .toList();
-      return coins;
-    } else {
-      throw Exception('Failed to load album');
-    }
   }
 
   Widget _getPriceList(PriceListViewModel vm) {
@@ -149,7 +133,6 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
                       icon: const Icon(Icons.add_alert),
                       tooltip: 'Set alert',
                       onPressed: () {
-                        // addPriceAlert(c, "1", "upper");
                         showPriceAlertDialog(context, c);
                       },
                     ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_practice/base/base_stateless_widget.dart';
 import 'package:flutter_practice/entity/coin_info.dart';
+import 'package:flutter_practice/repo/coin_repo.dart';
 import 'package:http/http.dart' as http;
 
 import 'entity/coin.dart';
@@ -118,7 +119,7 @@ Widget _coinDetailTabs() {
 
 Widget _coinInfo(String coinId) {
   return FutureBuilder(
-    future: _fetchCoinInfo(coinId),
+    future: CoinRepo.fetchCoinInfo(coinId),
     builder: (context, snapshot) {
       // Check for errors
       if (snapshot.hasError) {
@@ -184,7 +185,7 @@ Widget _coinInfo(String coinId) {
 
 Widget _coinPriceHistory(String coinId) {
   return FutureBuilder(
-    future: _fetchCoinPriceHistory(coinId),
+    future: CoinRepo.fetchCoinPriceHistory(coinId),
     builder: (context, snapshot) {
       // Check for errors
       if (snapshot.hasError) {
@@ -214,7 +215,7 @@ Widget _coinPriceHistory(String coinId) {
 
 Widget _coinExchange(String coinId) {
   return FutureBuilder(
-    future: _fetchCoinExchange(coinId),
+    future: CoinRepo.fetchCoinExchange(coinId),
     builder: (context, snapshot) {
       // Check for errors
       if (snapshot.hasError) {
@@ -292,45 +293,6 @@ showTradeDialog(BuildContext context, Coin coin, String action) {
         return dialog;
       }
   );
-}
-
-Future<CoinInfo> _fetchCoinInfo(String coinId) async {
-  // print("coin id = $coinId");
-  final response = await http.get(Uri.parse(
-      'https://api.coinstats.app/public/v1/coins/$coinId?currency=USD'));
-  if (response.statusCode == 200) {
-    CoinInfo coin = CoinInfo.fromJson(jsonDecode(response.body)["coin"]);
-    return coin;
-  } else {
-    throw Exception('Failed to fetch coin info.');
-  }
-}
-
-Future<List<CoinPriceHistory>> _fetchCoinPriceHistory(String coinId) async {
-  // print("coin id = $coinId");
-  final response = await http.get(Uri.parse(
-      'https://api.coinstats.app/public/v1/charts?period=24h&coinId=$coinId'));
-
-  if (response.statusCode == 200) {
-    List<CoinPriceHistory> histories = (jsonDecode(response.body)["chart"] as List).map((
-        data) => CoinPriceHistory.fromList(data)).toList();
-    return histories;
-  } else {
-    throw Exception('Failed to fetch coin info.');
-  }
-}
-
-Future<List<CoinExchange>> _fetchCoinExchange(String coinId) async {
-  // print("coin id = $coinId");
-  final response = await http.get(Uri.parse(
-      'https://api.coinstats.app/public/v1/markets?coinId=$coinId'));
-  if (response.statusCode == 200) {
-    List<CoinExchange> exchanges = (jsonDecode(response.body) as List).map((
-        data) => CoinExchange.fromJson(data)).toList();
-    return exchanges;
-  } else {
-    throw Exception('Failed to fetch coin info.');
-  }
 }
 
 Future<void> buyCoin(String username, String imgUrl, String pair, num amount, num price) async {

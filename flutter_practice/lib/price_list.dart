@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_practice/ext/stream_subscription.dart';
+import 'package:flutter_practice/firebase/firestore_manager.dart';
 import 'package:flutter_practice/price_list_view_model.dart';
 import 'package:flutter_practice/repo/coin_repo.dart';
 import 'package:rxdart/rxdart.dart';
@@ -8,7 +8,6 @@ import 'package:rxdart/rxdart.dart';
 import 'base/base_view_model.dart';
 import 'coin_details.dart';
 import 'entity/coin.dart';
-import 'entity/user_price_alert.dart';
 
 class PriceList extends StatefulWidget {
   PriceList({Key? key}) : super(key: key);
@@ -19,6 +18,7 @@ class PriceList extends StatefulWidget {
 }
 
 class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
+  FirestoreManager firestoreManager = FirestoreManager();
 
   @override
   void initState() {
@@ -31,7 +31,7 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
     CombineLatestStream.combine2(viewModel.dropdownSubject, timer, (a, b) => a)
         .listen((value) {
           CoinRepo.fetchCoinList(value as String).then((result) {
-            _fetchFavCoinList().forEach((element) {
+            firestoreManager.fetchFavCoinList("test").forEach((element) {
               result.forEach((coin) {
                 if (viewModel.favCoinList.contains(coin.id)) {
                   coin.isFav = true;
@@ -43,7 +43,7 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
             });
           });
        }).disposedBy(disposeBag);
-    _fetchFavCoinList().listen((event) {
+    firestoreManager.fetchFavCoinList("test").listen((event) {
       viewModel.setFavCoinIdsList(event.docs.map((e) => e.id).toList());
     }).disposedBy(disposeBag);
   }
@@ -126,7 +126,7 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
                       splashRadius: 25.0,
                       tooltip: 'Set favourite',
                       onPressed: () {
-                        vm.setFavCoin(index);
+                        vm.updateFavCoin(index);
                       },
                     ),
                     IconButton(
@@ -180,8 +180,6 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
           .toList(),
       onChanged: (newValue) {
         vm.setDropdownValue(newValue as String);
-        // this.dropdownSubject.add(newValue as String);
-        // this.dropdownValue = newValue;
       },
     );
   }
@@ -203,14 +201,14 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
         ElevatedButton(
             child: Text("Upper"),
             onPressed: () {
-              addPriceAlert(coin, inputValue, "upper");
+              firestoreManager.addPriceAlert(coin, inputValue, "upper");
               Navigator.of(context, rootNavigator: true).pop(true);
             }
         ),
         ElevatedButton(
             child: Text("Lower"),
             onPressed: () {
-              addPriceAlert(coin, inputValue, "lower");
+              firestoreManager.addPriceAlert(coin, inputValue, "lower");
               Navigator.of(context, rootNavigator: true).pop(true);
             }
         ),
@@ -250,26 +248,6 @@ class _PriceListState extends BaseMVVMState<PriceList, PriceListViewModel> {
 
   @override
   PriceListViewModel buildViewModel() => PriceListViewModel();
-}
-
-Future<void> addPriceAlert(Coin coin, String price, String direction) {
-  CollectionReference alertList = FirebaseFirestore.instance.collection(
-      'users/test/price_alert');
-  int timestamp = DateTime
-      .now()
-      .millisecondsSinceEpoch;
-  UserPriceAlert pa = UserPriceAlert(
-      id: coin.id, price: price, timestamp: timestamp, direction: direction);
-  return alertList
-      .add(pa.toJson())
-      .then((value) => print("Price Alert Added"))
-      .catchError((error) => print("Failed to add alert: $error"));
-}
-
-Stream<QuerySnapshot> _fetchFavCoinList() {
-  CollectionReference favCoinList =
-  FirebaseFirestore.instance.collection('users/test/fav_coin');
-  return favCoinList.snapshots();
 }
 
 Color getPriceChangeColor(num value) {

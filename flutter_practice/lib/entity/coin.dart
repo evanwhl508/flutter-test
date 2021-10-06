@@ -1,3 +1,5 @@
+import 'package:flutter_practice/type_define.dart';
+
 class Coin {
   final String id;
   final String url;
@@ -16,7 +18,7 @@ class Coin {
       required this.priceChange1d,
       required this.isFav});
 
-  factory Coin.fromJson(Map<String, dynamic> json) {
+  factory Coin.fromJson(Dict json) {
     return Coin(
       id: json['id'],
       url: json['icon'],

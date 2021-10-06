@@ -4,7 +4,6 @@ import 'package:flutter_practice/entity/coin_exchange.dart';
 import 'package:flutter_practice/entity/coin_info.dart';
 import 'package:flutter_practice/entity/coin_price_history.dart';
 import 'package:http/http.dart' as http;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_practice/entity/coin.dart';
 
 class CoinRepo {

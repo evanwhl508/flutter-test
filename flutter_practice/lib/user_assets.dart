@@ -1,14 +1,12 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_practice/base/base_stateless_widget.dart';
 import 'package:flutter_practice/repo/coin_repo.dart';
-import 'package:http/http.dart' as http;
 
 import 'entity/coin.dart';
+import 'firebase/firestore_manager.dart';
+import 'package:flutter_practice/type_define.dart';
 
 class UserAssets extends StatefulWidget {
   UserAssets({Key? key}) : super(key: key);
@@ -22,7 +20,8 @@ class _UserAssetsState extends BaseState<UserAssets> {
   String _totalAssetsDisplay = "0";
   num _tether = 0;
   bool _hiddenAsset = false;
-  Map<String, dynamic> assetValueDict = {};
+  Dict assetValueDict = {};
+  FirestoreManager firestoreManager = FirestoreManager();
 
   @override
   void initState() {
@@ -32,7 +31,7 @@ class _UserAssetsState extends BaseState<UserAssets> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: fetchBalance(),
+      stream: firestoreManager.fetchBalance("test"),
       builder:
           (BuildContext context, AsyncSnapshot<QuerySnapshot> balanceSnapshot) {
         if (balanceSnapshot.hasError) {
@@ -45,7 +44,7 @@ class _UserAssetsState extends BaseState<UserAssets> {
 
         var res = balanceSnapshot.data as QuerySnapshot;
         var assetList = res.docs;
-        Map<String, dynamic> assetAmountDict = {};
+        Dict assetAmountDict = {};
         assetList.forEach((element) {
           assetAmountDict[element.data()["symbol"]] = element.data()["amount"];
           assetValueDict[element.data()["symbol"]] = 0;
@@ -113,7 +112,7 @@ class _UserAssetsState extends BaseState<UserAssets> {
                                   MaterialStateProperty.all<Color>(Colors.blue),
                             ),
                             onPressed: () {
-                              deposit(1000, _tether);
+                              firestoreManager.deposit(1000, _tether);
                             },
                             child: Text('Deposit'),
                           ),
@@ -164,27 +163,4 @@ class _UserAssetsState extends BaseState<UserAssets> {
       },
     );
   }
-}
-
-Stream<QuerySnapshot> fetchBalance() {
-  CollectionReference balanceList =
-      FirebaseFirestore.instance.collection('users/test/balance');
-  return balanceList.snapshots();
-}
-
-Future<void> deposit(num initAmount, num adjAmount) {
-  DocumentReference tetherDoc =
-      FirebaseFirestore.instance.doc('users/test/balance/tether/');
-  Map<String, dynamic> tetherJson = {
-    "symbol": "tether",
-    "amount": initAmount + adjAmount,
-    "imgUrl": "https://static.coinstats.app/coins/TetherfopnG.png"
-  };
-  return tetherDoc
-      .set(
-        tetherJson,
-        SetOptions(merge: true),
-      )
-      .then((value) => print("----- Fav Coin Added"))
-      .catchError((error) => print("----- Failed to add fav coin: $error"));
 }

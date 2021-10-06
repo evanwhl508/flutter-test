@@ -1,9 +1,8 @@
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'base/base_view_model.dart';
 import 'entity/coin.dart';
+import 'firebase/firestore_manager.dart';
 
 class PriceListViewModel extends BaseViewModel {
   List<Coin> rawCoinList = List.empty();
@@ -12,11 +11,12 @@ class PriceListViewModel extends BaseViewModel {
   var dropdownSubject = BehaviorSubject<String>();
   List<String> items = ["USD", "HKD", "GBP", "JPY"];
   late String dropdownValue;
+  FirestoreManager firestoreManager = FirestoreManager();
 
-  void setFavCoin(int index) {
+  void updateFavCoin(int index) {
     Coin c = coinList[index];
     c.isFav = !c.isFav;
-    handleFavCoin(c);
+    firestoreManager.handleFavCoin(c);
     notifyListeners();
   }
 
@@ -56,29 +56,5 @@ class PriceListViewModel extends BaseViewModel {
     dropdownSubject.add(dropdownStr);
     dropdownValue = dropdownStr;
     notifyListeners();
-  }
-}
-
-Future<void> handleFavCoin(Coin coin) {
-  CollectionReference favCoinCollection = FirebaseFirestore.instance.collection(
-      'users/test/fav_coin');
-  Map<String, dynamic> favCoinJson = {
-    "id": coin.id,
-    "type": "spot"
-  };
-  if (coin.isFav) {
-    return favCoinCollection
-        .doc(coin.id)
-        .set(favCoinJson, SetOptions(merge: true),)
-        .then((value) => print("----- Fav Coin Added"))
-        .catchError((error) => print("----- Failed to add fav coin: $error"));
-  }
-  else {
-    return favCoinCollection.where('id', isEqualTo: coin.id).get().then((
-        value) {
-      favCoinCollection.doc(coin.id).delete()
-          .then((value) => print("----- Fav Coin deleted"))
-          .catchError((error) => print("----- Failed to delete fav coin: $error"));
-    });
   }
 }

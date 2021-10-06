@@ -1,3 +1,5 @@
+import 'package:flutter_practice/type_define.dart';
+
 class CoinInfo {
   final String id;
   final String url;
@@ -23,7 +25,7 @@ class CoinInfo {
         required this.totalSupply,
       });
 
-  factory CoinInfo.fromJson(Map<String, dynamic> json) {
+  factory CoinInfo.fromJson(Dict json) {
     return CoinInfo(
       id: json['id'],
       url: json['icon'],

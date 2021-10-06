@@ -1,3 +1,5 @@
+import 'package:flutter_practice/type_define.dart';
+
 class CoinExchange {
   final num price;
   final String exchange;
@@ -13,7 +15,7 @@ class CoinExchange {
         required this.volume,
       });
 
-  factory CoinExchange.fromJson(Map<String, dynamic> json) {
+  factory CoinExchange.fromJson(Dict json) {
     return CoinExchange(
       price: json['price'],
       exchange: json['exchange'],

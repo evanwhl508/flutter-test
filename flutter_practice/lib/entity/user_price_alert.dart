@@ -1,3 +1,5 @@
+import 'package:flutter_practice/type_define.dart';
+
 class UserPriceAlert {
   final String id;
   final String price;
@@ -11,7 +13,7 @@ class UserPriceAlert {
         required this.direction,
       });
 
-  Map<String, dynamic> toJson() => {
+  Dict toJson() => {
     'id': id,
     'price': price,
     'timestamp': timestamp,

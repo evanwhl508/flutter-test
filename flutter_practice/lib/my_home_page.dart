@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_practice/type_define.dart';
 
 import 'base/base_stateless_widget.dart';
+import 'firebase/firestore_manager.dart';
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -17,6 +18,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends BaseState<MyHomePage> {
+  FirestoreManager firestoreManager = FirestoreManager();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -28,11 +31,6 @@ class _MyHomePageState extends BaseState<MyHomePage> {
           ),
           bottomNavigationBar: _mainTabs(),
           body: _getBody(widget),
-          // floatingActionButton: FloatingActionButton(
-          // onPressed: () {},
-          // tooltip: 'Increment',
-          // child: Icon(Icons.arrow_upward),
-          // ),
         ),
       ),
     );
@@ -44,98 +42,17 @@ class _MyHomePageState extends BaseState<MyHomePage> {
         children: [
           PriceList(),
           UserAssets(),
-          _getPriceAlertList(),
-          _getUserTransactions(),
+          _getPriceAlertList(firestoreManager),
+          _getUserTransactions(firestoreManager),
         ],
       ),
     );
   }
-
-  Widget _getAssetList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: fetchBalance(),
-      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-        if (snapshot.hasError) {
-          return Text("Something went wrong");
-        }
-
-        // if (snapshot.hasData && !snapshot.data!.exists) {
-        //   return Text("Document does not exist");
-        // }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Text("Loading");
-        }
-
-        // if (snapshot.connectionState == ConnectionState.done) {
-        // print("data = ${snapshot.data}");
-        var res = snapshot.data as QuerySnapshot;
-        var assetList = res.docs;
-        // print("res = ${res}");
-        // print("docs = ${res.docs}, size = ${res.size}");
-        // print("docs = ${(res.docs[0]).id}");
-        // print("docs = ${(res.docs[0]).data()}");
-        // Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
-        return Column(
-          children: [
-            Row(
-              children: [
-                Center(child:
-                TextButton(
-                  style: ButtonStyle(
-                    foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                  ),
-                  onPressed: () {
-                  },
-                  child: Text('Deposit'),
-                ),),
-              ],
-            ),
-            Expanded(
-              child: ListView.separated(
-
-                  itemBuilder: (ctx, index) {
-                    var asset = assetList[index];
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: Image.network(
-                            asset["imgUrl"],
-                            width: 50,
-                            height: 50,
-                            errorBuilder: (ctx, error, trace) {
-                              return Container(width: 30, height: 30);
-                            },
-                          ),
-                        ),
-                        Expanded(child: Text(asset["symbol"])),
-                        Spacer(flex: 1,),
-                        Expanded(
-                            child: Column(
-                          children: [
-                            Text(asset["amount"].toString()),
-                            Text("Value"),
-                          ],
-                        )),
-                      ],
-                    );
-                  },
-                  separatorBuilder: (_, __) => Divider(),
-                  itemCount: assetList.length),
-            ),
-          ],
-        );
-        // }
-
-        // return Text("loading");
-      },
-    );
-  }
 }
 
-Widget _getPriceAlertList() {
+Widget _getPriceAlertList(FirestoreManager firestoreManager) {
   return StreamBuilder<QuerySnapshot>(
-    stream: fetchAlertList(),
+    stream: firestoreManager.fetchAlertList("test"),
     builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
       if (snapshot.hasError) {
         return Text("Something went wrong");
@@ -183,9 +100,9 @@ Widget _getPriceAlertList() {
   );
 }
 
-Widget _getUserTransactions() {
+Widget _getUserTransactions(FirestoreManager firestoreManager) {
   return StreamBuilder<QuerySnapshot>(
-    stream: fetchTransactions(),
+    stream: firestoreManager.fetchTransactions("test"),
     builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
       if (snapshot.hasError) {
         return Text("Something went wrong");
@@ -264,27 +181,6 @@ Widget _mainTabs() {
       ],
     ),
   );
-}
-
-Stream<QuerySnapshot> fetchBalance() {
-  CollectionReference balanceList =
-      FirebaseFirestore.instance.collection('users/test/balance');
-// Call the user's CollectionReference to add a new user
-  return balanceList.snapshots();
-}
-
-Stream<QuerySnapshot> fetchAlertList() {
-  CollectionReference alertList =
-      FirebaseFirestore.instance.collection('users/test/price_alert');
-// Call the user's CollectionReference to add a new user
-  return alertList.snapshots();
-}
-
-Stream<QuerySnapshot> fetchTransactions() {
-  CollectionReference transactions =
-      FirebaseFirestore.instance.collection('users/test/transaction');
-// Call the user's CollectionReference to add a new user
-  return transactions.snapshots();
 }
 
 Color updateTransactionTypeColor(String type) {

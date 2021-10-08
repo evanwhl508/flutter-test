@@ -1,12 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_practice/base/base_stateless_widget.dart';
-import 'package:flutter_practice/repo/coin_repo.dart';
+import 'package:flutter_practice/base/base_view_model.dart';
+import 'package:flutter_practice/user_assets_view_model.dart';
 
-import 'entity/coin.dart';
-import 'firebase/firestore_manager.dart';
-import 'package:flutter_practice/type_define.dart';
 
 class UserAssets extends StatefulWidget {
   UserAssets({Key? key}) : super(key: key);
@@ -15,152 +11,94 @@ class UserAssets extends StatefulWidget {
   _UserAssetsState createState() => _UserAssetsState();
 }
 
-class _UserAssetsState extends BaseState<UserAssets> {
-  num _totalAssets = 0;
-  String _totalAssetsDisplay = "0";
-  num _tether = 0;
-  bool _hiddenAsset = false;
-  Dict assetValueDict = {};
-  FirestoreManager firestoreManager = FirestoreManager();
+class _UserAssetsState extends BaseMVVMState<UserAssets, UserAssetsViewModel> {
 
   @override
   void initState() {
     super.initState();
+    viewModel.initAssets();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: firestoreManager.fetchBalance("test"),
-      builder:
-          (BuildContext context, AsyncSnapshot<QuerySnapshot> balanceSnapshot) {
-        if (balanceSnapshot.hasError) {
-          return Text("Something went wrong");
-        }
+  UserAssetsViewModel buildViewModel() => UserAssetsViewModel();
 
-        if (balanceSnapshot.connectionState == ConnectionState.waiting) {
-          return Text("Loading");
-        }
-
-        var res = balanceSnapshot.data as QuerySnapshot;
-        var assetList = res.docs;
-        Dict assetAmountDict = {};
-        assetList.forEach((element) {
-          assetAmountDict[element.data()["symbol"]] = element.data()["amount"];
-          assetValueDict[element.data()["symbol"]] = 0;
-        });
-        return FutureBuilder(
-            future: CoinRepo.fetchCoinList("USD"),
-            builder: (context, priceSnapshot) {
-              // Check for errors
-              if (priceSnapshot.hasError) {
-                return Container(
-                  color: Colors.red,
-                );
-              }
-
-              // Once complete, show your application
-              if (priceSnapshot.connectionState == ConnectionState.done) {
-                var value = priceSnapshot.data as List<Coin>;
-                _totalAssets = 0;
-                _tether = 0;
-                value.forEach((element) {
-                  if (assetAmountDict.containsKey(element.id)) {
-                    _totalAssets += assetAmountDict[element.id] * element.price;
-                    _totalAssetsDisplay = _totalAssets.toStringAsFixed(2);
-                    assetValueDict[element.id] =
-                        assetAmountDict[element.id] * element.price;
+  @override
+  Widget buildChild(ctx, vm) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text("Current Asset"),
+            Checkbox(
+              value: vm.hiddenAsset,
+              onChanged: (bool? newValue) {
+                setState(() {
+                  vm.hiddenAsset = newValue!;
+                  if (vm.hiddenAsset) {
+                    vm.totalAssetsDisplay = "******";
+                  } else {
+                    vm.totalAssetsDisplay =
+                        vm.totalAssets.toStringAsFixed(2);
                   }
-                  if (element.id == "tether") {
-                    _tether = assetAmountDict[element.id];
-                  }
-                  print(
-                      " element = ${element.id}, _totalAssets = $_totalAssets, _tether = $_tether");
                 });
-                print("_totalAssets = $_totalAssets, _tether = $_tether");
-
-                return Column(
+              },
+            )
+          ],
+        ),
+        Row(
+          children: [Text(vm.totalAssetsDisplay)],
+        ),
+        Row(
+          children: [
+            Center(
+              child: TextButton(
+                style: ButtonStyle(
+                  foregroundColor:
+                  MaterialStateProperty.all<Color>(Colors.blue),
+                ),
+                onPressed: () {
+                  vm.firestoreManager.deposit(1000, vm.tether);
+                },
+                child: Text('Deposit'),
+              ),
+            ),
+          ],
+        ),
+        Expanded(
+          child: ListView.separated(
+              itemBuilder: (ctx, index) {
+                var asset = vm.assetList[index];
+                return Row(
                   children: [
-                    Row(
-                      children: [
-                        Text("Current Asset"),
-                        Checkbox(
-                          value: _hiddenAsset,
-                          onChanged: (bool? newValue) {
-                            setState(() {
-                              _hiddenAsset = newValue!;
-                              if (_hiddenAsset) {
-                                _totalAssetsDisplay = "******";
-                              } else {
-                                _totalAssetsDisplay =
-                                    _totalAssets.toStringAsFixed(2);
-                              }
-                            });
-                          },
-                        )
-                      ],
+                    Expanded(
+                      child: Image.network(
+                        asset["imgUrl"],
+                        width: 50,
+                        height: 50,
+                        errorBuilder: (ctx, error, trace) {
+                          return Container(width: 30, height: 30);
+                        },
+                      ),
                     ),
-                    Row(
-                      children: [Text(_totalAssetsDisplay)],
-                    ),
-                    Row(
-                      children: [
-                        Center(
-                          child: TextButton(
-                            style: ButtonStyle(
-                              foregroundColor:
-                                  MaterialStateProperty.all<Color>(Colors.blue),
-                            ),
-                            onPressed: () {
-                              firestoreManager.deposit(1000, _tether);
-                            },
-                            child: Text('Deposit'),
-                          ),
-                        ),
-                      ],
+                    Expanded(child: Text(asset["symbol"])),
+                    Spacer(
+                      flex: 1,
                     ),
                     Expanded(
-                      child: ListView.separated(
-                          itemBuilder: (ctx, index) {
-                            var asset = assetList[index];
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: Image.network(
-                                    asset["imgUrl"],
-                                    width: 50,
-                                    height: 50,
-                                    errorBuilder: (ctx, error, trace) {
-                                      return Container(width: 30, height: 30);
-                                    },
-                                  ),
-                                ),
-                                Expanded(child: Text(asset["symbol"])),
-                                Spacer(
-                                  flex: 1,
-                                ),
-                                Expanded(
-                                    child: Column(
-                                  children: [
-                                    Text(asset["amount"].toString()),
-                                    Text(assetValueDict[asset["symbol"]]
-                                        .toStringAsFixed(2)),
-                                  ],
-                                )),
-                              ],
-                            );
-                          },
-                          separatorBuilder: (_, __) => Divider(),
-                          itemCount: assetList.length),
-                    ),
+                        child: Column(
+                          children: [
+                            Text(asset["amount"].toString()),
+                            Text(vm.assetValueDict[asset["symbol"]]
+                                .toStringAsFixed(2)),
+                          ],
+                        )),
                   ],
                 );
-              }
-
-              // Otherwise, show something whilst waiting for initialization to complete
-              return Container(color: Colors.white, child: Icon(Icons.more_time),);
-            });
-      },
+              },
+              separatorBuilder: (_, __) => Divider(),
+              itemCount: vm.assetList.length),
+        ),
+      ],
     );
   }
 }
